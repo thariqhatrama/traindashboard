@@ -1,33 +1,31 @@
 <?php
 
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "train_monitoring";
+// Supabase PostgreSQL credentials
+$host = "db.yajtyhtfnbybeghfflxp.supabase.co";      // ganti dengan hostname Supabase Anda
+$user = "postgres";                // default username Supabase
+$password = "ramakevin12";   // ganti dengan password Supabase Anda
+$dbname = "postgres";              // default dbname di Supabase
+$port = 5432;
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
+// Buat koneksi
+$conn = pg_connect("host=$host port=$port dbname=$dbname user=$user password=$password");
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if (!$conn) {
+    die("Connection failed: " . pg_last_error());
 }
 
-// Get parameters
-$checkpoint = $_GET['checkpoint'];
-$status = $_GET['status'];
+// Ambil parameter dari GET
+$checkpoint = $_GET['checkpoint'] ?? '';
+$status = $_GET['status'] ?? '';
 
-// Prepare and bind
-$stmt = $conn->prepare("INSERT INTO train_logs (checkpoint, status) VALUES (?, ?)");
-$stmt->bind_param("ss", $checkpoint, $status);
+// Query dengan prepared statement
+$result = pg_query_params($conn, "INSERT INTO train_logs (checkpoint, status) VALUES ($1, $2)", [$checkpoint, $status]);
 
-// Execute and check
-if ($stmt->execute()) {
+if ($result) {
     echo "Data recorded successfully";
 } else {
-    echo "Error: " . $stmt->error;
+    echo "Error: " . pg_last_error($conn);
 }
 
-$stmt->close();
-$conn->close();
+pg_close($conn);
 ?>
