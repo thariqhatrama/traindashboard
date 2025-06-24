@@ -1,7 +1,0 @@
-FROM php:8.2-apache
-
-# Salin semua file di folder public ke server Apache
-COPY public/ /var/www/html/
-
-# Aktifkan modul PostgreSQL
-RUN docker-php-ext-install pgsql pdo_pgsql
