@@ -1,130 +1,53 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    const activityChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Aktivitas Kereta',
-                data: [],
-                borderColor: '#3498db',
-                tension: 0.3,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Jumlah Aktivitas'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Waktu'
-                    }
-                }
-            }
-        }
+const SUPABASE_URL = "https://yajtyhtfnbybeghfflxp.supabase.co";
+const SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanR5aHRmbmJ5YmVnaGZmbHhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDYwNjcsImV4cCI6MjA2NjMyMjA2N30.9V0gkxmrrTkZxAXF2k3wLCfoBCVn4NkGADRFjEraLE8"; // Ganti dengan anon key Anda
+
+const checkpoints = ["CP1", "CP2", "CP3", "CP4", "CP5", "SU", "SS"];
+
+async function fetchLatestLogs() {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/train_logs?select=*&order=timestamp.desc&limit=50`, {
+      headers: {
+        apikey: SUPABASE_API_KEY,
+        Authorization: `Bearer ${SUPABASE_API_KEY}`
+      }
     });
 
-    // Update dashboard setiap 5 detik
-    setInterval(updateDashboard, 5000);
-    updateDashboard();
+    const logs = await response.json();
+    const latestStatus = {};
 
-    async function updateDashboard() {
-        try {
-            const response = await fetch('get_status.php');
-            const data = await response.json();
-            
-            // Update last update time
-            document.getElementById('last-update').textContent = 
-                new Date().toLocaleTimeString();
-            
-            // Update train status
-            updateTrainStatus(data.trains);
-            
-            // Update light signals
-            updateLights(data.lights);
-            
-            // Update chart
-            updateChart(activityChart, data.logs);
-            
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
+    // Ambil status terakhir dari masing-masing checkpoint
+    for (const log of logs) {
+      const cp = log.checkpoint.toUpperCase();
+      if (!latestStatus[cp] && checkpoints.includes(cp)) {
+        latestStatus[cp] = log.status.toLowerCase(); // merah / kuning / hijau
+      }
     }
 
-    function updateTrainStatus(trains) {
-        const runningEl = document.getElementById('running-train-status');
-        const parkingEl = document.getElementById('parking-train-status');
-        
-        // Reset all indicators
-        document.querySelectorAll('.train-indicator').forEach(el => {
-            el.className = 'train-indicator';
-        });
-        
-        if (trains.running) {
-            runningEl.innerHTML = `<strong>${trains.running}</strong>`;
-            const runningLocation = trains.running.replace(/\s+/g, '-').toLowerCase();
-            document.getElementById(`train-${runningLocation}`).classList.add('running');
-        } else {
-            runningEl.textContent = 'Tidak terdeteksi';
-        }
-        
-        if (trains.parking) {
-            parkingEl.innerHTML = `<strong>${trains.parking}</strong>`;
-            const parkingLocation = trains.parking.replace(/\s+/g, '-').toLowerCase();
-            document.getElementById(`train-${parkingLocation}`).classList.add('parking');
-        } else {
-            parkingEl.textContent = 'Tidak terdeteksi';
-        }
+    // Reset warna
+    checkpoints.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.className = "checkpoint";
+    });
+
+    // Terapkan warna lampu sesuai status
+    Object.entries(latestStatus).forEach(([cp, status]) => {
+      const el = document.getElementById(cp);
+      if (el && ["merah", "kuning", "hijau"].includes(status)) {
+        el.classList.add(status === "merah" ? "red" : status === "kuning" ? "yellow" : "green");
+      }
+    });
+
+    // Tampilkan waktu update
+    if (logs[0]) {
+      document.getElementById("last-update").textContent =
+        "Last update: " + new Date(logs[0].timestamp).toLocaleString();
     }
 
-    function updateLights(lights) {
-        // Reset all lights
-        document.querySelectorAll('.light').forEach(light => {
-            light.classList.remove('active');
-        });
-        
-        // Activate current lights
-        for (const [location, status] of Object.entries(lights)) {
-            const prefix = location.startsWith('CP') ? 'cp' : location.toLowerCase();
-            const lightBox = document.getElementById(`light-${prefix}`);
-            
-            // Clear previous lights
-            lightBox.innerHTML = '';
-            
-            // Create new lights based on status
-            ['red', 'yellow', 'green'].forEach(color => {
-                const light = document.createElement('div');
-                light.className = `light ${color} ${status[color] ? 'active' : ''}`;
-                lightBox.appendChild(light);
-            });
-        }
-    }
+  } catch (err) {
+    console.error("Gagal ambil data Supabase:", err);
+  }
+}
 
-    function updateChart(chart, logs) {
-        const now = new Date();
-        const labels = [];
-        const data = [];
-        
-        // Generate last 12 time points (5 min intervals)
-        for (let i = 11; i >= 0; i--) {
-            const time = new Date(now - i * 5 * 60000);
-            labels.push(time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
-            
-            const timeStr = time.toISOString().slice(0, 16).replace('T', ' ');
-            const count = logs.filter(log => log.timestamp.startsWith(timeStr)).length;
-            data.push(count);
-        }
-        
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = data;
-        chart.update();
-    }
-});
+// Jalankan saat halaman dibuka, lalu auto-refresh
+fetchLatestLogs();
+setInterval(fetchLatestLogs, 5000);
