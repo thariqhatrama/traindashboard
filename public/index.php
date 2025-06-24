@@ -1,32 +1,70 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard Kereta</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Monitoring Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>🚦 Monitoring Jalur Kereta</h1>
-  <div class="track-container">
-    <!-- Peron Stasiun -->
-    <div class="station">
-      <div class="checkpoint" id="SU">SU</div>
-      <div class="checkpoint" id="SS">SS</div>
+    <div class="container">
+        <h1>🚆 Railway Monitoring System</h1>
+        
+        <!-- Peta Jalur Kereta -->
+        <div class="track-map">
+            <div class="station" id="station">
+                <h3>STASIUN</h3>
+                <div class="platforms">
+                    <div class="platform main" id="platform-main">
+                        <h4>Peron Utama (SU)</h4>
+                        <div class="light-box" id="light-su"></div>
+                        <div class="train-indicator" id="train-su"></div>
+                    </div>
+                    <div class="platform secondary" id="platform-secondary">
+                        <h4>Peron Sekunder (SS)</h4>
+                        <div class="light-box" id="light-ss"></div>
+                        <div class="train-indicator" id="train-ss"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="track">
+                <?php for($i=1; $i<=5; $i++): ?>
+                <div class="track-segment">
+                    <div class="checkpoint" id="cp<?= $i ?>">
+                        <h4>CP<?= $i ?></h4>
+                        <div class="light-box" id="light-cp<?= $i ?>"></div>
+                        <div class="train-indicator" id="train-cp<?= $i ?>"></div>
+                    </div>
+                    <div class="track-line"></div>
+                </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+        
+        <!-- Panel Status -->
+        <div class="status-panel">
+            <div class="status-card running-train">
+                <h3>KERETA BERJALAN</h3>
+                <div id="running-train-status">Tidak terdeteksi</div>
+            </div>
+            <div class="status-card parking-train">
+                <h3>KERETA PARKIR</h3>
+                <div id="parking-train-status">Tidak terdeteksi</div>
+            </div>
+            <div class="status-card last-update">
+                <h3>LAST UPDATE</h3>
+                <div id="last-update">-</div>
+            </div>
+        </div>
+        
+        <!-- Grafik Log Aktivitas -->
+        <div class="chart-container">
+            <canvas id="activityChart"></canvas>
+        </div>
     </div>
-    
-    <!-- Jalur CP1 - CP5 -->
-    <div class="track">
-      <div class="checkpoint" id="CP1">CP1</div>
-      <div class="checkpoint" id="CP2">CP2</div>
-      <div class="checkpoint" id="CP3">CP3</div>
-      <div class="checkpoint" id="CP4">CP4</div>
-      <div class="checkpoint" id="CP5">CP5</div>
-    </div>
-  </div>
-  
-  <div id="last-update">Last update: -</div>
 
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
