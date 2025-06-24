@@ -66,7 +66,7 @@
     </div>
 <script>
 const SUPABASE_URL = 'https://yajtyhtfnbybeghfflxp.supabase.co';
-const SUPABASE_API_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Ganti dengan anon key Anda
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanR5aHRmbmJ5YmVnaGZmbHhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDYwNjcsImV4cCI6MjA2NjMyMjA2N30.9V0gkxmrrTkZxAXF2k3wLCfoBCVn4NkGADRFjEraLE8'; // Ganti dengan anon key Anda
 
 // Ambil log terakhir
 async function fetchLastTrainLog() {
