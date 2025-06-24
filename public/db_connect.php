@@ -1,12 +1,16 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "train_monitoring";
+// Ganti dengan data dari Supabase
+$host     = "db.yajtyhtfnbybeghfflxp.supabase.co";
+$port     = "5432";
+$dbname   = "postgres"; // default dari Supabase
+$user     = "postgres";
+$password = "ramakevin12";
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+// Buat koneksi PostgreSQL
+$conn = pg_connect("host=$host port=$port dbname=$dbname user=$user password=$password");
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// Cek koneksi
+if (!$conn) {
+    die("Connection failed: " . pg_last_error());
 }
 ?>
