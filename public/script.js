@@ -1,53 +1,127 @@
-const SUPABASE_URL = "https://yajtyhtfnbybeghfflxp.supabase.co";
-const SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanR5aHRmbmJ5YmVnaGZmbHhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDYwNjcsImV4cCI6MjA2NjMyMjA2N30.9V0gkxmrrTkZxAXF2k3wLCfoBCVn4NkGADRFjEraLE8"; // Ganti dengan anon key Anda
-
-const checkpoints = ["CP1", "CP2", "CP3", "CP4", "CP5", "SU", "SS"];
-
-async function fetchLatestLogs() {
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/train_logs?select=*&order=timestamp.desc&limit=50`, {
-      headers: {
-        apikey: SUPABASE_API_KEY,
-        Authorization: `Bearer ${SUPABASE_API_KEY}`
-      }
+document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    const activityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Aktivitas Kereta',
+                data: [],
+                borderColor: '#3498db',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Jumlah Aktivitas'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Waktu'
+                    }
+                }
+            }
+        }
     });
 
-    const logs = await response.json();
-    const latestStatus = {};
+    // Update dashboard setiap 5 detik
+    setInterval(updateDashboard, 5000);
+    updateDashboard();
 
-    // Ambil status terakhir dari masing-masing checkpoint
-    for (const log of logs) {
-      const cp = log.checkpoint.toUpperCase();
-      if (!latestStatus[cp] && checkpoints.includes(cp)) {
-        latestStatus[cp] = log.status.toLowerCase(); // merah / kuning / hijau
-      }
+    async function updateDashboard() {
+        try {
+            const response = await fetch('get_status.php');
+            const data = await response.json();
+
+            // Update waktu
+            document.getElementById('last-update').textContent =
+                new Date().toLocaleString('id-ID');
+
+            // Update status kereta
+            updateTrainStatus(data.trains);
+
+            // Update lampu per checkpoint
+            updateLights(data.lights);
+
+            // Update grafik aktivitas
+            updateChart(activityChart, data.logs);
+
+        } catch (error) {
+            console.error('Gagal mengambil data dari get_status.php:', error);
+        }
     }
 
-    // Reset warna
-    checkpoints.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.className = "checkpoint";
-    });
+    function updateTrainStatus(trains) {
+        const runningEl = document.getElementById('running-train-status');
+        const parkingEl = document.getElementById('parking-train-status');
 
-    // Terapkan warna lampu sesuai status
-    Object.entries(latestStatus).forEach(([cp, status]) => {
-      const el = document.getElementById(cp);
-      if (el && ["merah", "kuning", "hijau"].includes(status)) {
-        el.classList.add(status === "merah" ? "red" : status === "kuning" ? "yellow" : "green");
-      }
-    });
+        // Reset indikator kereta
+        document.querySelectorAll('.train-indicator').forEach(el => {
+            el.className = 'train-indicator';
+        });
 
-    // Tampilkan waktu update
-    if (logs[0]) {
-      document.getElementById("last-update").textContent =
-        "Last update: " + new Date(logs[0].timestamp).toLocaleString();
+        if (trains.running) {
+            runningEl.innerHTML = `<strong>${trains.running}</strong>`;
+            const id = `train-${trains.running.toLowerCase()}`;
+            const el = document.getElementById(id);
+            if (el) el.classList.add('running');
+        } else {
+            runningEl.textContent = 'Tidak terdeteksi';
+        }
+
+        if (trains.parking) {
+            parkingEl.innerHTML = `<strong>${trains.parking}</strong>`;
+            const id = `train-${trains.parking.toLowerCase().includes('utama') ? 'su' : 'ss'}`;
+            const el = document.getElementById(id);
+            if (el) el.classList.add('parking');
+        } else {
+            parkingEl.textContent = 'Tidak terdeteksi';
+        }
     }
 
-  } catch (err) {
-    console.error("Gagal ambil data Supabase:", err);
-  }
-}
+    function updateLights(lights) {
+        document.querySelectorAll('.light-box').forEach(box => {
+            box.innerHTML = ''; // reset isi
+        });
 
-// Jalankan saat halaman dibuka, lalu auto-refresh
-fetchLatestLogs();
-setInterval(fetchLatestLogs, 5000);
+        for (const [location, status] of Object.entries(lights)) {
+            const id = `light-${location.toLowerCase()}`;
+            const box = document.getElementById(id);
+            if (!box) continue;
+
+            ['red', 'yellow', 'green'].forEach(color => {
+                const div = document.createElement('div');
+                div.className = `light ${color} ${status[color] ? 'active' : ''}`;
+                box.appendChild(div);
+            });
+        }
+    }
+
+    function updateChart(chart, logs) {
+        const now = new Date();
+        const labels = [];
+        const data = [];
+
+        for (let i = 11; i >= 0; i--) {
+            const time = new Date(now - i * 5 * 60000);
+            const label = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            labels.push(label);
+
+            const target = time.toISOString().slice(0, 16); // format: yyyy-MM-ddTHH:mm
+            const count = logs.filter(log => log.timestamp.startsWith(target)).length;
+            data.push(count);
+        }
+
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update();
+    }
+});
