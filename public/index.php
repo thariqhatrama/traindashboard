@@ -64,6 +64,49 @@
             <canvas id="activityChart"></canvas>
         </div>
     </div>
+<script>
+const SUPABASE_URL = 'https://yajtyhtfnbybeghfflxp.supabase.co';
+const SUPABASE_API_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Ganti dengan anon key Anda
+
+// Ambil log terakhir
+async function fetchLastTrainLog() {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/train_logs?select=*&order=timestamp.desc&limit=1`, {
+            headers: {
+                apikey: SUPABASE_API_KEY,
+                Authorization: `Bearer ${SUPABASE_API_KEY}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.length > 0) {
+            const log = data[0];
+            document.getElementById('last-update').textContent = new Date(log.timestamp).toLocaleString();
+
+            // Update indikator di CP atau STASIUN
+            const targetId = `light-${log.checkpoint.toLowerCase()}`;
+            const lightElement = document.getElementById(targetId);
+            if (lightElement) {
+                lightElement.style.backgroundColor = (log.status === 'merah') ? 'red' : 'green';
+            }
+
+            // Contoh tambahan: update status panel
+            if (log.checkpoint.toLowerCase().includes('su') || log.checkpoint.toLowerCase().includes('ss')) {
+                document.getElementById('parking-train-status').textContent = `Parkir di ${log.checkpoint}`;
+            } else {
+                document.getElementById('running-train-status').textContent = `Berjalan di ${log.checkpoint}`;
+            }
+        }
+    } catch (error) {
+        console.error('Gagal ambil log:', error);
+    }
+}
+
+// Panggil saat halaman dimuat
+fetchLastTrainLog();
+setInterval(fetchLastTrainLog, 5000); // auto-refresh tiap 5 detik
+</script>
 
     <script src="script.js"></script>
 </body>
