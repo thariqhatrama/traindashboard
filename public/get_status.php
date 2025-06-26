@@ -1,72 +1,47 @@
 <?php
 header('Content-Type: application/json');
 
-$anon_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanR5aHRmbmJ5YmVnaGZmbHhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDYwNjcsImV4cCI6MjA2NjMyMjA2N30.9V0gkxmrrTkZxAXF2k3wLCfoBCVn4NkGADRFjEraLE8'; // Ganti dengan key dari Supabase
-$supabase_url = 'https://yajtyhtfnbybeghfflxp.supabase.co';
-
-// Inisialisasi data status
+// Get light status and train positions
 $status = [
-    'lights' => [],
-    'trains' => [
-        'running' => null,
-        'parking' => null
-    ],
-    'logs' => []
+  'lights' => array_fill_keys($points, ['red'=>false,'yellow'=>false,'green'=>false]),
+  'trains' => ['running'=>null,'parking'=>[]],
+  'route'  => '–',
+  'logs'   => []    // nanti untuk grafik
 ];
 
-// Ambil log terakhir dari Supabase
-$context = stream_context_create([
-    'http' => [
-        'method' => 'GET',
-        'header' => [
-            "apikey: $anon_key",
-            "Authorization: Bearer $anon_key"
-        ]
-    ]
-]);
-
-$response = file_get_contents("$supabase_url/rest/v1/train_logs?select=*&order=timestamp.desc&limit=20", false, $context);
-$data = json_decode($response, true);
-
-// Update log dan status
-if ($data) {
-    foreach ($data as $row) {
-        $cp = strtoupper($row['checkpoint']);
-        $st = strtoupper($row['status']);
-
-        $status['logs'][] = [
-            'checkpoint' => $cp,
-            'status' => $st,
-            'timestamp' => $row['timestamp']
-        ];
-
-        // Simulasi status lampu (jika ingin tetap dummy)
-        $status['lights'][$cp] = [
-            'red' => $st === 'MERAH',
-            'yellow' => $st === 'KUNING',
-            'green' => $st === 'HIJAU'
-        ];
-
-        // Deteksi posisi kereta (optional)
-        if ($st === 'DETECTING') {
-            if ($cp === 'SU' || $cp === 'SS') {
-                $status['trains']['parking'] = 'Peron ' . ($cp === 'SU' ? 'Utama' : 'Sekunder');
-            } else {
-                $status['trains']['running'] = $cp;
-            }
-        }
-    }
+// Get latest light status (simplified logic)
+$checkpoints = ['SU', 'SS', 'CP1', 'CP2', 'CP3', 'CP4', 'CP5'];
+foreach ($checkpoints as $cp) {
+    $status['lights'][$cp] = [
+        'red' => rand(0, 1) > 0.7, // Simulated status
+        'yellow' => rand(0, 1) > 0.7,
+        'green' => rand(0, 1) > 0.7
+    ];
 }
 
-// Tambahkan titik yang belum ada (agar tidak error)
-$all_points = ['SU', 'SS', 'CP1', 'CP2', 'CP3', 'CP4', 'CP5'];
-foreach ($all_points as $cp) {
-    if (!isset($status['lights'][$cp])) {
-        $status['lights'][$cp] = [
-            'red' => false,
-            'yellow' => false,
-            'green' => false
+// Get train positions from database
+$query = "SELECT * FROM train_logs 
+          ORDER BY timestamp DESC 
+          LIMIT 20";
+$result = $conn->query($query);
+
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $status['logs'][] = [
+            'checkpoint' => $row['checkpoint'],
+            'status' => $row['status'],
+            'timestamp' => $row['timestamp']
         ];
+        
+        // Determine train positions (simplified logic)
+        if ($row['status'] === 'DETECTING') {
+            if ($row['checkpoint'] === 'SU' || $row['checkpoint'] === 'SS') {
+                $status['trains']['parking'] = "Peron " . 
+                    ($row['checkpoint'] === 'SU' ? 'Utama' : 'Sekunder');
+            } else {
+                $status['trains']['running'] = "CP" . substr($row['checkpoint'], 2);
+            }
+        }
     }
 }
 

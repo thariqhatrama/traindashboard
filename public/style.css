@@ -159,6 +159,7 @@ h1 {
 
 .running-train { border-top: 4px solid var(--secondary); }
 .parking-train { border-top: 4px solid var(--success); }
+.route-info { border-top: 4px solid var(--primary); }
 .last-update { border-top: 4px solid var(--warning); }
 
 .chart-container {

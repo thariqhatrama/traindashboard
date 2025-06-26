@@ -1,3 +1,4 @@
+
 <?php
 // Cek parameter dari ESP32 atau Web
 $checkpoint = $_GET['checkpoint'] ?? null;

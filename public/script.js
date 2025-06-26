@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     const activityChart = new Chart(ctx, {
         type: 'line',
@@ -40,67 +40,70 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch('get_status.php');
             const data = await response.json();
-
-            // Update waktu
-            document.getElementById('last-update').textContent =
-                new Date().toLocaleString('id-ID');
-
-            // Update status kereta
+            
+            // Update last update time
+            document.getElementById('last-update').textContent = 
+                new Date().toLocaleTimeString();
+            
+            // Update train status
             updateTrainStatus(data.trains);
-
-            // Update lampu per checkpoint
+            
+            // Update light signals
             updateLights(data.lights);
-
-            // Update grafik aktivitas
+            
+            // Update chart
             updateChart(activityChart, data.logs);
-
+            
         } catch (error) {
-            console.error('Gagal mengambil data dari get_status.php:', error);
+            console.error('Error fetching data:', error);
         }
     }
 
     function updateTrainStatus(trains) {
         const runningEl = document.getElementById('running-train-status');
         const parkingEl = document.getElementById('parking-train-status');
-
-        // Reset indikator kereta
+        
+        // Reset all indicators
         document.querySelectorAll('.train-indicator').forEach(el => {
             el.className = 'train-indicator';
         });
-
+        
         if (trains.running) {
             runningEl.innerHTML = `<strong>${trains.running}</strong>`;
-            const id = `train-${trains.running.toLowerCase()}`;
-            const el = document.getElementById(id);
-            if (el) el.classList.add('running');
+            const runningLocation = trains.running.replace(/\s+/g, '-').toLowerCase();
+            document.getElementById(`train-${runningLocation}`).classList.add('running');
         } else {
             runningEl.textContent = 'Tidak terdeteksi';
         }
-
+        
         if (trains.parking) {
             parkingEl.innerHTML = `<strong>${trains.parking}</strong>`;
-            const id = `train-${trains.parking.toLowerCase().includes('utama') ? 'su' : 'ss'}`;
-            const el = document.getElementById(id);
-            if (el) el.classList.add('parking');
+            const parkingLocation = trains.parking.replace(/\s+/g, '-').toLowerCase();
+            document.getElementById(`train-${parkingLocation}`).classList.add('parking');
         } else {
             parkingEl.textContent = 'Tidak terdeteksi';
         }
     }
 
     function updateLights(lights) {
-        document.querySelectorAll('.light-box').forEach(box => {
-            box.innerHTML = ''; // reset isi
+        // Reset all lights
+        document.querySelectorAll('.light').forEach(light => {
+            light.classList.remove('active');
         });
-
+        
+        // Activate current lights
         for (const [location, status] of Object.entries(lights)) {
-            const id = `light-${location.toLowerCase()}`;
-            const box = document.getElementById(id);
-            if (!box) continue;
-
+            const prefix = location.startsWith('CP') ? 'cp' : location.toLowerCase();
+            const lightBox = document.getElementById(`light-${prefix}`);
+            
+            // Clear previous lights
+            lightBox.innerHTML = '';
+            
+            // Create new lights based on status
             ['red', 'yellow', 'green'].forEach(color => {
-                const div = document.createElement('div');
-                div.className = `light ${color} ${status[color] ? 'active' : ''}`;
-                box.appendChild(div);
+                const light = document.createElement('div');
+                light.className = `light ${color} ${status[color] ? 'active' : ''}`;
+                lightBox.appendChild(light);
             });
         }
     }
@@ -109,17 +112,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const now = new Date();
         const labels = [];
         const data = [];
-
+        
+        // Generate last 12 time points (5 min intervals)
         for (let i = 11; i >= 0; i--) {
             const time = new Date(now - i * 5 * 60000);
-            const label = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            labels.push(label);
-
-            const target = time.toISOString().slice(0, 16); // format: yyyy-MM-ddTHH:mm
-            const count = logs.filter(log => log.timestamp.startsWith(target)).length;
+            labels.push(time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            
+            const timeStr = time.toISOString().slice(0, 16).replace('T', ' ');
+            const count = logs.filter(log => log.timestamp.startsWith(timeStr)).length;
             data.push(count);
         }
-
+        
         chart.data.labels = labels;
         chart.data.datasets[0].data = data;
         chart.update();

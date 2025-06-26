@@ -34,7 +34,7 @@
                 <div class="track-segment">
                     <div class="checkpoint" id="cp<?= $i ?>">
                         <h4>CP<?= $i ?></h4>
-                        <div class="light-box" id="light-cp<?= $i ?>"></div>
+                        <!-- <div class="light-box" id="light-cp<?= $i ?>"></div> -->
                         <div class="train-indicator" id="train-cp<?= $i ?>"></div>
                     </div>
                     <div class="track-line"></div>
@@ -49,6 +49,10 @@
                 <h3>KERETA BERJALAN</h3>
                 <div id="running-train-status">Tidak terdeteksi</div>
             </div>
+              <div class="status-card route-info">
+    <h3>Jalur Kereta Menuju</h3>
+    <div id="route-info">–</div>
+  </div>
             <div class="status-card parking-train">
                 <h3>KERETA PARKIR</h3>
                 <div id="parking-train-status">Tidak terdeteksi</div>
@@ -58,6 +62,7 @@
                 <div id="last-update">-</div>
             </div>
         </div>
+        
         
         <!-- Grafik Log Aktivitas -->
         <div class="chart-container">
