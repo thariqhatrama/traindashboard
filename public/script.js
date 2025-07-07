@@ -1,68 +1,62 @@
-// script.js
-
 document.addEventListener('DOMContentLoaded', () => {
-  // --- DOM Elements for Speed Panels ---
+  // --- DOM Elements ---
   const speedPanel = document.getElementById('speed-status');
-  const modePanel  = document.getElementById('speed-mode');
-  const colorPanel = document.getElementById('speed-color');
+  const modePanel = document.getElementById('speed-mode');
   const lastUpdate = document.getElementById('last-update');
-  const routeInfo  = document.getElementById('route-info');
+  const routeInfo = document.getElementById('route-info');
+  const runningTrainStatus = document.getElementById('running-train-status');
+  const parkingTrainStatus = document.getElementById('parking-train-status');
 
   async function updateDashboard() {
     // 1) Update train status & lights
     try {
       const res = await fetch('get_status.php', { cache: 'no-store' });
-      const d   = await res.json();
-
+      const d = await res.json();
+      
       // Last update timestamp
       lastUpdate.textContent = new Date().toLocaleString('id-ID');
-
+      
       // Route info
       routeInfo.textContent = d.route;
-
+      
       updateTrainStatus(d.trains);
       updateLights(d.lights);
     } catch (e) {
       console.error('Error fetching status:', e);
     }
 
-    // 2) Update speed panels
+    // 2) Update speed data
     try {
-      // fetch latest speed entry only
-      const resp = await fetch('api_supabase.php?mode=log_speed&limit=1', { cache: 'no-store' });
-      const logs = await resp.json();
-
-      if (Array.isArray(logs) && logs.length > 0) {
-        const entry = logs[0];
+      // Ambil data kecepatan terbaru
+      const speedRes = await fetch('get_status.php?mode=speed&limit=1', { cache: 'no-store' });
+      const speedData = await speedRes.json();
+      
+      if (speedData.length > 0) {
+        const entry = speedData[0];
         const rawSpeed = parseInt(entry.kecepatan, 10);
-
-        // 2.1) Speed text
+        
+        // Tampilkan status kecepatan
         let speedText;
         switch (rawSpeed) {
           case 255: speedText = 'Kecepatan Penuh'; break;
+          case 200: speedText = 'Kecepatan Tinggi'; break;
           case 128: speedText = 'Kecepatan Sedang'; break;
-          case   0: speedText = 'Berhenti';          break;
+          case 100: speedText = 'Kecepatan Rendah'; break;
+          case   0: speedText = 'Berhenti'; break;
           default:  speedText = `Kecepatan: ${rawSpeed}`; break;
         }
         speedPanel.textContent = speedText;
-
-        // 2.2) Mode
+        
+        // Tampilkan mode
         modePanel.textContent = entry.mode.charAt(0).toUpperCase() + entry.mode.slice(1);
-
-        // 2.3) Warna
-        colorPanel.textContent = entry.warna
-          ? entry.warna.charAt(0).toUpperCase() + entry.warna.slice(1)
-          : '-';
       } else {
         speedPanel.textContent = 'Tidak ada data';
-        modePanel.textContent  = '-';
-        colorPanel.textContent = '-';
+        modePanel.textContent = '-';
       }
     } catch (e) {
-      console.error('Error fetching speed:', e);
+      console.error('Error fetching speed data:', e);
       speedPanel.textContent = 'Error';
-      modePanel.textContent  = '-';
-      colorPanel.textContent = '-';
+      modePanel.textContent = '-';
     }
   }
 

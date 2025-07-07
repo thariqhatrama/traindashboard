@@ -5,6 +5,28 @@ header('Content-Type: application/json');
 $anon_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhanR5aHRmbmJ5YmVnaGZmbHhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDYwNjcsImV4cCI6MjA2NjMyMjA2N30.9V0gkxmrrTkZxAXF2k3wLCfoBCVn4NkGADRFjEraLE8'; // Ganti dengan key dari Supabase
 $supabase_url = 'https://yajtyhtfnbybeghfflxp.supabase.co';
 
+// --- ENDPOINT UNTUK DATA KECEPATAN ---
+if (isset($_GET['mode']) && $_GET['mode'] === 'speed') {
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 1;
+    $url = "$supabase_url/rest/v1/log_speed?select=*&order=created_at.desc&limit=$limit";
+    
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => [
+                "apikey: $anon_key",
+                "Authorization: Bearer $anon_key"
+            ]
+        ]
+    ]);
+    
+    $json = file_get_contents($url, false, $ctx);
+    $speedData = json_decode($json, true);
+    
+    echo json_encode($speedData);
+    exit;
+}
+
 // 1) Ambil 50 log terbaru
 $ctx  = stream_context_create([
   'http' => [
