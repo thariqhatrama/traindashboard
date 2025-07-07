@@ -44,34 +44,32 @@
         
         <!-- Panel Status -->
         <div class="status-panel">
-        <div class="status-card running-train">
-            <h3>KERETA BERJALAN</h3>
-            <div id="running-train-status">Tidak terdeteksi</div>
+            <div class="status-card last-update">
+                <h3>LAST UPDATE</h3>
+                <div id="last-update">-</div>
+            </div>
+            <div class="status-card running-train">
+                <h3>KERETA BERJALAN</h3>
+                <div id="running-train-status">Tidak terdeteksi</div>
+            </div>
+            <div class="status-card route-info">
+                <h3>Jalur Kereta Menuju</h3>
+                <div id="route-info">–</div>
+            </div>
+            <div class="status-card parking-train">
+                <h3>KERETA PARKIR</h3>
+                <div id="parking-train-status">Tidak terdeteksi</div>
+            </div>
         </div>
-        <div class="status-card route-info">
-            <h3>Jalur Kereta Menuju</h3>
-            <div id="route-info">–</div>
-        </div>
-        <div class="status-card parking-train">
-            <h3>KERETA PARKIR</h3>
-            <div id="parking-train-status">Tidak terdeteksi</div>
-        </div>
-        <div class="status-card speed-status-card">
-            <h3>KECEPATAN</h3>
-            <div id="speed-status">-</div>
-        </div>
-        <div class="status-card speed-mode-card">
-            <h3>MODE</h3>
-            <div id="speed-mode">-</div>
-        </div>
-        <div class="status-card speed-color-card">
-            <h3>WARNA</h3>
-            <div id="speed-color">-</div>
-        </div>
-        <div class="status-card last-update">
-            <h3>LAST UPDATE</h3>
-            <div id="last-update">-</div>
-        </div>
+        <div class="status-panel">
+            <div class="status-card speed-status-card">
+                <h3>KECEPATAN</h3>
+                <div id="speed-status">-</div>
+            </div>
+            <div class="status-card speed-mode-card">
+                <h3>MODE</h3>
+                <div id="speed-mode">-</div>
+            </div>
         </div>
     </div>
     
