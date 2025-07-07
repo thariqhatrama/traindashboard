@@ -66,7 +66,7 @@
         
         <!-- Grafik Log Aktivitas -->
         <div class="chart-container">
-            <canvas id="activityChart"></canvas>
+            <canvas id="speedChart" width="400" height="200"></canvas>
         </div>
     </div>
 
