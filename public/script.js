@@ -1,59 +1,103 @@
+// script.js
+
 document.addEventListener('DOMContentLoaded', () => {
-  const ctx = document.getElementById('activityChart').getContext('2d');
-  const activityChart = new Chart(ctx, {
+  // --- Chart Kecepatan Kereta ---
+  const speedCtx = document.getElementById('speedChart').getContext('2d');
+  const speedChart = new Chart(speedCtx, {
     type: 'line',
-    data: { labels: [], datasets: [{ label: 'Aktivitas Kereta', data: [], tension:0.3, fill:true }] },
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Kecepatan Kereta (km/h)',
+        data: [],
+        tension: 0.2,
+        borderWidth: 2,
+        fill: false
+      }]
+    },
     options: {
       responsive: true,
       scales: {
-        y: { beginAtZero:true, title:{display:true,text:'Jumlah Aktivitas'} },
-        x: { title:{display:true,text:'Waktu'} }
+        x: {
+          type: 'time',
+          time: {
+            parser: 'YYYY-MM-DDTHH:mm:ss',
+            unit: 'second',
+            displayFormats: { second: 'HH:mm:ss' }
+          },
+          title: { display: true, text: 'Waktu' }
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Kecepatan (km/h)' }
+        }
+      },
+      plugins: {
+        legend: { position: 'top' }
       }
     }
   });
 
+  // --- Entry Point ---
   async function updateDashboard() {
+    // (1) Update status lampu & train-indicator
     try {
-      const res = await fetch('get_status.php', { cache:'no-store' });
-      const d   = await res.json();
+      const res = await fetch('get_status.php', { cache: 'no-store' });
+      const data = await res.json();
 
-      // Last update
+      // Last update time
       document.getElementById('last-update').textContent =
         new Date().toLocaleString('id-ID');
 
-      // Route
-      document.getElementById('route-info').textContent = d.route;
+      // Route info
+      document.getElementById('route-info').textContent = data.route;
 
-      updateTrainStatus(d.trains);
-      updateLights(d.lights);
-      updateChart(activityChart, d.logs);
+      updateTrainStatus(data.trains);
+      updateLights(data.lights);
+    } catch (err) {
+      console.error('Error fetching status:', err);
+    }
 
-    } catch (e) {
-      console.error('Error:', e);
+    // (2) Update speed chart
+    try {
+      const resp = await fetch('api_supabase.php?mode=log_speed', { cache: 'no-store' });
+      const speedLogs = await resp.json();
+
+      const labels = speedLogs.map(entry => entry.timestamp);
+      const speeds = speedLogs.map(entry => entry.speed);
+
+      speedChart.data.labels = labels;
+      speedChart.data.datasets[0].data = speeds;
+      speedChart.update();
+    } catch (err) {
+      console.error('Error fetching speed data:', err);
     }
   }
 
+  // --- Helpers ---
   function updateTrainStatus(trains) {
-    // reset
+    // reset all indicators
     document.querySelectorAll('.train-indicator').forEach(el => {
-      el.classList.remove('running','parking');
+      el.classList.remove('running', 'parking');
     });
-    // running
+
+    // running indicator
     if (trains.running) {
       document.getElementById('running-train-status').innerHTML =
         `<strong>${trains.running}</strong>`;
-      const el = document.getElementById(`train-${trains.running.toLowerCase()}`);
-      if (el) el.classList.add('running');
+      const runEl = document.getElementById(`train-${trains.running.toLowerCase()}`);
+      if (runEl) runEl.classList.add('running');
     } else {
       document.getElementById('running-train-status').textContent = 'Tidak terdeteksi';
     }
-    // parking
-    if (trains.parking.length) {
+
+    // parking indicator(s)
+    if (trains.parking && trains.parking.length) {
       document.getElementById('parking-train-status').innerHTML =
         `<strong>${trains.parking.join(', ')}</strong>`;
       trains.parking.forEach(p => {
-        const el = document.getElementById(`train-${p.toLowerCase()}`);
-        if (el) el.classList.add('parking');
+        const parkEl = document.getElementById(`train-${p.toLowerCase()}`);
+        if (parkEl) parkEl.classList.add('parking');
       });
     } else {
       document.getElementById('parking-train-status').textContent = 'Tidak terdeteksi';
@@ -61,38 +105,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateLights(lights) {
-    document.querySelectorAll('.light-box').forEach(box => box.innerHTML = '');
-    Object.entries(lights).forEach(([loc,sts]) => {
+    // clear all light-boxes
+    document.querySelectorAll('.light-box').forEach(box => {
+      box.innerHTML = '';
+    });
+
+    // render new lights
+    Object.entries(lights).forEach(([loc, state]) => {
       const box = document.getElementById(`light-${loc.toLowerCase()}`);
       if (!box) return;
-      ['red','yellow','green'].forEach(color => {
+
+      ['red', 'yellow', 'green'].forEach(color => {
         const dot = document.createElement('div');
-        dot.className = `light ${color}${sts[color] ? ' active' : ''}`;
+        dot.className = `light ${color}` + (state[color] ? ' active' : '');
         box.appendChild(dot);
       });
     });
   }
 
-  function updateChart(chart, logs) {
-    const now = new Date(), labels = [], data = [];
-    // 12 titik tiap 5 menit = 1 jam
-    for (let i=11;i>=0;i--) {
-      const t = new Date(now - i*5*60000);
-      labels.push(t.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
-    }
-    labels.forEach(label => {
-      const [h,m] = label.split(':');
-      const date = now.toISOString().split('T')[0];
-      const prefix = `${date}T${h.padStart(2,'0')}:${m}`;
-      const cnt = logs.filter(r => r.timestamp.startsWith(prefix)).length;
-      data.push(cnt);
-    });
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = data;
-    chart.update();
-  }
-
-  // loop
+  // initial load and interval
   updateDashboard();
   setInterval(updateDashboard, 5000);
 });
