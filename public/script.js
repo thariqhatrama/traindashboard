@@ -1,92 +1,77 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // --- Speed Chart Setup ---
-  const speedCtx = document.getElementById('speedChart').getContext('2d');
-  const speedChart = new Chart(speedCtx, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [{
-        label: 'Kecepatan Kereta',
-        data: [],
-        tension: 0.2,
-        borderWidth: 2,
-        fill: false,
-        pointRadius: 4,
-        pointBackgroundColor: []
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        x: {
-          type: 'time',
-          time: {
-            parser: 'YYYY-MM-DDTHH:mm:ss',
-            unit: 'second',
-            displayFormats: { second: 'HH:mm:ss' }
-          },
-          title: { display: true, text: 'Waktu' }
-        },
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: 'Kecepatan' }
-        }
-      },
-      plugins: {
-        legend: { position: 'top' }
-      }
-    }
-  });
+// script.js
 
-  // --- Main update loop ---
+document.addEventListener('DOMContentLoaded', () => {
+  // --- DOM Elements for Speed Panels ---
+  const speedPanel = document.getElementById('speed-status');
+  const modePanel  = document.getElementById('speed-mode');
+  const colorPanel = document.getElementById('speed-color');
+  const lastUpdate = document.getElementById('last-update');
+  const routeInfo  = document.getElementById('route-info');
+
   async function updateDashboard() {
-    // 1) Update lampu & positions
+    // 1) Update train status & lights
     try {
       const res = await fetch('get_status.php', { cache: 'no-store' });
-      const data = await res.json();
+      const d   = await res.json();
 
-      document.getElementById('last-update').textContent =
-        new Date().toLocaleString('id-ID');
-      document.getElementById('route-info').textContent = data.route;
+      // Last update timestamp
+      lastUpdate.textContent = new Date().toLocaleString('id-ID');
 
-      updateTrainStatus(data.trains);
-      updateLights(data.lights);
-    } catch (err) {
-      console.error('Status fetch error:', err);
+      // Route info
+      routeInfo.textContent = d.route;
+
+      updateTrainStatus(d.trains);
+      updateLights(d.lights);
+    } catch (e) {
+      console.error('Error fetching status:', e);
     }
 
-    // 2) Fetch speed logs
+    // 2) Update speed panels
     try {
-      const resp = await fetch('api_supabase.php?mode=log_speed', { cache: 'no-store' });
-      const speedLogs = await resp.json();
+      // fetch latest speed entry only
+      const resp = await fetch('api_supabase.php?mode=log_speed&limit=1', { cache: 'no-store' });
+      const logs = await resp.json();
 
-      // Prepare arrays
-      const labels = speedLogs.map(e => e.created_at);
-      const speeds = speedLogs.map(e => parseFloat(e.kecepatan));
-      const colors = speedLogs.map(e => {
-        switch (e.warna) {
-          case 'hijau':  return 'green';
-          case 'kuning': return 'gold';
-          case 'merah':  return 'red';
-          default:       return 'gray';
+      if (Array.isArray(logs) && logs.length > 0) {
+        const entry = logs[0];
+        const rawSpeed = parseInt(entry.kecepatan, 10);
+
+        // 2.1) Speed text
+        let speedText;
+        switch (rawSpeed) {
+          case 255: speedText = 'Kecepatan Penuh'; break;
+          case 128: speedText = 'Kecepatan Sedang'; break;
+          case   0: speedText = 'Berhenti';          break;
+          default:  speedText = `Kecepatan: ${rawSpeed}`; break;
         }
-      });
+        speedPanel.textContent = speedText;
 
-      // Update chart
-      speedChart.data.labels = labels;
-      speedChart.data.datasets[0].data = speeds;
-      speedChart.data.datasets[0].pointBackgroundColor = colors;
-      speedChart.update();
-    } catch (err) {
-      console.error('Speed fetch error:', err);
+        // 2.2) Mode
+        modePanel.textContent = entry.mode.charAt(0).toUpperCase() + entry.mode.slice(1);
+
+        // 2.3) Warna
+        colorPanel.textContent = entry.warna
+          ? entry.warna.charAt(0).toUpperCase() + entry.warna.slice(1)
+          : '-';
+      } else {
+        speedPanel.textContent = 'Tidak ada data';
+        modePanel.textContent  = '-';
+        colorPanel.textContent = '-';
+      }
+    } catch (e) {
+      console.error('Error fetching speed:', e);
+      speedPanel.textContent = 'Error';
+      modePanel.textContent  = '-';
+      colorPanel.textContent = '-';
     }
   }
 
-  // --- Helper functions ---
   function updateTrainStatus(trains) {
+    // reset indicators
     document.querySelectorAll('.train-indicator').forEach(el =>
-      el.classList.remove('running', 'parking')
+      el.classList.remove('running','parking')
     );
+    // running
     if (trains.running) {
       document.getElementById('running-train-status').innerHTML =
         `<strong>${trains.running}</strong>`;
@@ -95,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       document.getElementById('running-train-status').textContent = 'Tidak terdeteksi';
     }
+    // parking
     if (trains.parking && trains.parking.length) {
       document.getElementById('parking-train-status').innerHTML =
         `<strong>${trains.parking.join(', ')}</strong>`;
@@ -108,19 +94,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateLights(lights) {
-    document.querySelectorAll('.light-box').forEach(box => box.innerHTML = '');
+    // clear all light boxes
+    document.querySelectorAll('.light-box').forEach(box => {
+      box.innerHTML = '';
+    });
+    // render new lights
     Object.entries(lights).forEach(([loc, state]) => {
       const box = document.getElementById(`light-${loc.toLowerCase()}`);
       if (!box) return;
-      ['red', 'yellow', 'green'].forEach(color => {
-        const d = document.createElement('div');
-        d.className = `light ${color}` + (state[color] ? ' active' : '');
-        box.appendChild(d);
+      ['red','yellow','green'].forEach(color => {
+        const dot = document.createElement('div');
+        dot.className = `light ${color}` + (state[color] ? ' active' : '');
+        box.appendChild(dot);
       });
     });
   }
 
-  // Initial and polling
+  // initial load & polling
   updateDashboard();
   setInterval(updateDashboard, 5000);
 });
