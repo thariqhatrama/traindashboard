@@ -99,25 +99,111 @@ foreach ($latestStation as $cp=>$st) {
   }
 }
 
-// 6) Bangun lampu untuk RUNNING
-$run = $status['trains']['running'];
-if ($run) {
-  // reset CP lamp
-  foreach (['CP1','CP2','CP3','CP4','CP5'] as $cp) {
-    $status['lights'][$cp] = ['red'=>false,'yellow'=>false,'green'=>false];
-  }
-  // red di current
-  $status['lights'][$run]['red'] = true;
-  // yellow di previous (circular)
-  $seq = ['CP1','CP2','CP3','CP4','CP5'];
-  $i   = array_search($run, $seq, true);
-  $prev = ($i === 0 ? 'CP5' : $seq[$i-1]);
-  $status['lights'][$prev]['yellow'] = true;
+// 6) Tentukan skenario lampu berdasarkan posisi kereta
+$scenario = -1;
+
+// Tentukan skenario berdasarkan posisi kereta
+if ($status['trains']['running']) {
+    switch ($status['trains']['running']) {
+        case 'CP1': $scenario = 0; break;
+        case 'CP2': $scenario = 1; break;
+        case 'CP3': $scenario = 2; break;
+        case 'CP4': $scenario = 3; break;
+        case 'CP5': $scenario = 4; break;
+    }
+} else {
+    if (in_array('SU', $status['trains']['parking'])) {
+        $scenario = 5; // SU
+    }
+    if (in_array('SS', $status['trains']['parking'])) {
+        $scenario = 6; // SS
+    }
+    if (in_array('SU', $status['trains']['parking']) && 
+        in_array('SS', $status['trains']['parking']) && 
+        $status['trains']['running'] === 'CP3') {
+        $scenario = 7; // SS SU CP3
+    }
 }
 
-// 7) Bangun lampu untuk PARKING (SU/SS)
-foreach ($status['trains']['parking'] as $cp) {
-  $status['lights'][$cp] = ['red'=>false,'yellow'=>false,'green'=>true];
+// 7) Atur lampu berdasarkan skenario
+switch ($scenario) {
+    case 0: // CP1
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 1: // CP2
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 2: // CP3
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 3: // CP4
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 4: // CP5
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 5: // SU
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 6: // SS
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['yellow'] = true;
+        $status['lights']['CP1']['green'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['yellow'] = true;
+        $status['lights']['CP4']['green'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    case 7: // SS SU CP3
+        $status['lights']['SU']['red'] = true;
+        $status['lights']['SS']['red'] = true;
+        $status['lights']['CP1']['red'] = true;
+        $status['lights']['CP2']['red'] = true;
+        $status['lights']['CP3']['red'] = true;
+        $status['lights']['CP4']['red'] = true;
+        $status['lights']['CP5']['red'] = true;
+        break;
+    default:
+        // Default: semua lampu mati
+        foreach ($status['lights'] as $key => &$light) {
+            $light = ['red' => false, 'yellow' => false, 'green' => false];
+        }
 }
 
 // 8) Tentukan ROUTE
