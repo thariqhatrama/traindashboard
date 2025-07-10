@@ -106,5 +106,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // initial load & polling
   updateDashboard();
-  setInterval(updateDashboard, 5000);
+  setInterval(updateDashboard, 1000);
 });
