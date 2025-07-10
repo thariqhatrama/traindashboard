@@ -51,7 +51,8 @@ $status = [
 ];
 
 // 3) Simpan logs (terbaru dulu)
-foreach ($logs as $r) {
+$reversedLogs = array_reverse($logs);
+foreach ($reversedLogs as $r) {
   $status['logs'][] = [
     'checkpoint'=> strtoupper($r['checkpoint']),
     'status'    => strtoupper($r['status']),
@@ -61,28 +62,30 @@ foreach ($logs as $r) {
 
 // 4) Tentukan RUNNING: first occurrence of CP1–CP5 in logs
 foreach ($status['logs'] as $r) {
-  if (in_array($r['checkpoint'], ['CP1','CP2','CP3','CP4','CP5'], true)) {
-    $status['trains']['running'] = $r['checkpoint'];
+  if ($r['checkpoint'] === 'CP5') {
+    $runningPosition = 'CP5';
     break;
   }
 }
 
+$status['trains']['running'] = $runningPosition;
+
 // NEW: Hapus CP5 jika SU/SS sudah mendeteksi kereta masuk
-$latestCP = null;
-$latestStation = null;
-foreach ($status['logs'] as $log) {
-  if ($log['status'] === 'DETECTING') {
-    if (in_array($log['checkpoint'], ['CP1','CP2','CP3','CP4','CP5'], true) && !$latestCP) {
-      $latestCP = $log['checkpoint'];
-    }
-    if (in_array($log['checkpoint'], ['SU','SS'], true) && !$latestStation) {
-      $latestStation = $log['checkpoint'];
-    }
-  }
-}
-if ($latestCP === 'CP5' && $latestStation !== null) {
-  $status['trains']['running'] = null;
-}
+// $latestCP = null;
+// $latestStation = null;
+// foreach ($status['logs'] as $log) {
+//   if ($log['status'] === 'DETECTING') {
+//     if (in_array($log['checkpoint'], ['CP1','CP2','CP3','CP4','CP5'], true) && !$latestCP) {
+//       $latestCP = $log['checkpoint'];
+//     }
+//     if (in_array($log['checkpoint'], ['SU','SS'], true) && !$latestStation) {
+//       $latestStation = $log['checkpoint'];
+//     }
+//   }
+// }
+// if ($latestCP === 'CP5' && $latestStation !== null) {
+//   $status['trains']['running'] = null;
+// }
 
 // 5) Tentukan PARKING: untuk SU/SS, cek status terbaru masing-masing
 //    cari first log per stasiun
