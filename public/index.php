@@ -53,7 +53,7 @@
                 <div id="running-train-status">Tidak terdeteksi</div>
             </div>
             <div class="status-card route-info">
-                <h3>Jalur Kereta Menuju</h3>
+                <h3>Kereta Menuju Stasiun</h3>
                 <div id="route-info">–</div>
             </div>
             <div class="status-card parking-train">
