@@ -136,5 +136,5 @@ function updateTrainStatus(trains) {
 
   // initial load & polling
   updateDashboard();
-  setInterval(updateDashboard, 500); // Pembaruan setiap 500ms
+  setInterval(updateDashboard, 1000); // Pembaruan setiap 500ms
 });
