@@ -214,14 +214,12 @@ switch ($scenario) {
         }
 }
 
-// 8) Tentukan ROUTE berdasarkan posisi terbaru
-if ($status['trains']['running']) {
-    $status['route'] = 'Kereta sedang berjalan di ' . $status['trains']['running'];
-} elseif (!empty($status['trains']['parking'])) {
-    $parkingList = implode(', ', $status['trains']['parking']);
-    $status['route'] = "Kereta parkir di $parkingList";
-} else {
-    $status['route'] = 'Tidak ada kereta aktif';
+// 8) Tentukan ROUTE
+if (count($status['trains']['parking']) === 1 && $status['trains']['running']) {
+  $p = $status['trains']['parking'][0];
+  $status['route'] = ($p === 'SU') ? 'Peron Sekunder (SS)' : 'Peron Utama (SU)';
+} elseif (count($status['trains']['parking']) === 2 && $status['trains']['running'] === 'CP3') {
+  $status['route'] = 'Jalur tertutup';
 }
 
 // 9) Kembalikan JSON
