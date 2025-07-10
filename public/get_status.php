@@ -41,48 +41,46 @@ $url  = "$supabase_url/rest/v1/train_logs?select=checkpoint,status,timestamp&ord
 $json = file_get_contents($url, false, $ctx);
 $logs = json_decode($json, true);
 
-// 2) Inisialisasi struktur
-$points = ['SU','SS','CP1','CP2','CP3','CP4','CP5'];
+// 2) Inisialisasi struktur status
+$points = ['SU', 'SS', 'CP1', 'CP2', 'CP3', 'CP4', 'CP5'];
 $status = [
-  'lights' => array_fill_keys($points, ['red'=>false,'yellow'=>false,'green'=>false]),
-  'trains' => ['running'=>null,'parking'=>[]],
+  'lights' => array_fill_keys($points, ['red' => false, 'yellow' => false, 'green' => false]),
+  'trains' => ['running' => null, 'parking' => []],
   'route'  => '–',
   'logs'   => []
 ];
 
-// 3) Simpan logs dengan urutan terbalik (terlama -> terbaru)
+// 3) Simpan logs urutan terbaru
 $reversedLogs = array_reverse($logs);
 foreach ($reversedLogs as $r) {
   $status['logs'][] = [
-    'checkpoint'=> strtoupper($r['checkpoint']),
-    'status'    => strtoupper($r['status']),
-    'timestamp' => $r['timestamp']
+    'checkpoint' => strtoupper($r['checkpoint']),
+    'status'     => strtoupper($r['status']),
+    'timestamp'  => $r['timestamp']
   ];
 }
 
-// 4) Tentukan RUNNING: cari log terbaru dari CP1–CP5
+// 4) Tentukan posisi RUNNING: ambil checkpoint CP1–CP5 terbaru
 $runningPosition = null;
 $lastCheckpointTime = null;
 $lastStationTime = null;
 
-// Cari checkpoint terbaru
 foreach ($status['logs'] as $r) {
-  if (in_array($r['checkpoint'], ['CP1','CP2','CP3','CP4','CP5'], true)) {
+  if (in_array($r['checkpoint'], ['CP1', 'CP2', 'CP3', 'CP4', 'CP5'], true)) {
     if ($lastCheckpointTime === null || $r['timestamp'] > $lastCheckpointTime) {
       $runningPosition = $r['checkpoint'];
       $lastCheckpointTime = $r['timestamp'];
     }
   }
-  
-  // Cari stasiun terbaru
-  if (in_array($r['checkpoint'], ['SU','SS'], true)) {
+
+  if (in_array($r['checkpoint'], ['SU', 'SS'], true)) {
     if ($lastStationTime === null || $r['timestamp'] > $lastStationTime) {
       $lastStationTime = $r['timestamp'];
     }
   }
 }
 
-// Jika ada stasiun yang lebih baru dari checkpoint, reset running position
+// Reset RUNNING jika stasiun lebih baru dari checkpoint
 if ($lastStationTime !== null && $lastCheckpointTime !== null && 
     $lastStationTime > $lastCheckpointTime) {
   $runningPosition = null;
@@ -90,21 +88,30 @@ if ($lastStationTime !== null && $lastCheckpointTime !== null &&
 
 $status['trains']['running'] = $runningPosition;
 
-// 5) Tentukan PARKING: untuk SU/SS, cek status terbaru masing-masing
-$latestStation = [];
+// 5) Cek status SU & SS untuk PARKING dengan timestamp terbaru
+$stationStatus = ['SU' => null, 'SS' => null];
+$stationTimestamps = ['SU' => null, 'SS' => null];
+
 foreach ($status['logs'] as $r) {
-  if (in_array($r['checkpoint'], ['SU','SS'], true) && !isset($latestStation[$r['checkpoint']])) {
-    $latestStation[$r['checkpoint']] = $r['status'];
+  $cp = $r['checkpoint'];
+  if (in_array($cp, ['SU', 'SS'], true)) {
+    // Simpan hanya status terbaru untuk setiap stasiun
+    if ($stationTimestamps[$cp] === null || $r['timestamp'] > $stationTimestamps[$cp]) {
+      $stationStatus[$cp] = $r['status'];
+      $stationTimestamps[$cp] = $r['timestamp'];
+    }
   }
-  if (count($latestStation) === 2) break;
 }
 
-foreach ($latestStation as $cp => $st) {
+// Reset array parking
+$status['trains']['parking'] = [];
+
+// Tambahkan stasiun ke parking jika status terbaru adalah DETECTING
+foreach ($stationStatus as $cp => $st) {
   if ($st === 'DETECTING') {
     $status['trains']['parking'][] = $cp;
   }
 }
-
 // 6) Tentukan skenario lampu berdasarkan posisi kereta
 $scenario = -1;
 
@@ -208,11 +215,13 @@ switch ($scenario) {
 }
 
 // 8) Tentukan ROUTE berdasarkan posisi terbaru
-if (count($status['trains']['parking']) === 1 && $status['trains']['running']) {
-  $p = $status['trains']['parking'][0];
-  $status['route'] = ($p === 'SU') ? 'Peron Sekunder (SS)' : 'Peron Utama (SU)';
-} elseif (count($status['trains']['parking']) === 2 && $status['trains']['running'] === 'CP3') {
-  $status['route'] = 'Jalur tertutup';
+if ($status['trains']['running']) {
+    $status['route'] = 'Kereta sedang berjalan di ' . $status['trains']['running'];
+} elseif (!empty($status['trains']['parking'])) {
+    $parkingList = implode(', ', $status['trains']['parking']);
+    $status['route'] = "Kereta parkir di $parkingList";
+} else {
+    $status['route'] = 'Tidak ada kereta aktif';
 }
 
 // 9) Kembalikan JSON

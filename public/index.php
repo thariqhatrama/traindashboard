@@ -18,12 +18,12 @@
             <div class="platform main" id="platform-main">
                 <h4>Peron Utama (SU)</h4>
                 <div class="light-box" id="light-su"></div>
-                <div class="train-indicator" id="train-su"></div>
+                <div class="train-indicator" id="train-su" data-station="SU"></div>
             </div>
             <div class="platform secondary" id="platform-secondary">
                 <h4>Peron Sekunder (SS)</h4>
                 <div class="light-box" id="light-ss"></div>
-                <div class="train-indicator" id="train-ss"></div>
+                <div class="train-indicator" id="train-ss" data-station="SS"></div>
             </div>
             </div>
         </div>
@@ -31,12 +31,12 @@
         <div class="track">
             <?php for($i=1; $i<=5; $i++): ?>
             <div class="track-segment">
-            <div class="checkpoint" id="cp<?= $i ?>">
-                <h4>CP<?= $i ?></h4>
-                <div class="light-box" id="light-cp<?= $i ?>"></div>
-                <div class="train-indicator" id="train-cp<?= $i ?>"></div>
-            </div>
-            <div class="track-line"></div>
+                <div class="checkpoint" id="cp<?= $i ?>">
+                    <h4>CP<?= $i ?></h4>
+                    <div class="light-box" id="light-cp<?= $i ?>"></div>
+                    <div class="train-indicator" id="train-cp<?= $i ?>" data-checkpoint="CP<?= $i ?>"></div>
+                </div>
+                <div class="track-line"></div>
             </div>
             <?php endfor; ?>
         </div>

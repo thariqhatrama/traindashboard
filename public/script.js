@@ -7,20 +7,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const runningTrainStatus = document.getElementById('running-train-status');
   const parkingTrainStatus = document.getElementById('parking-train-status');
 
+  // Cache untuk optimasi
+  let lastSpeedData = null;
+  let lastStatusData = null;
+  let activeParkingStations = new Set();
+
   async function updateDashboard() {
     // 1) Update train status & lights
     try {
       const res = await fetch('get_status.php', { cache: 'no-store' });
       const d = await res.json();
       
-      // Last update timestamp
-      lastUpdate.textContent = new Date().toLocaleString('id-ID');
-      
-      // Route info
-      routeInfo.textContent = d.route;
-      
-      updateTrainStatus(d.trains);
-      updateLights(d.lights);
+      // Perbarui hanya jika ada perubahan
+      if (JSON.stringify(d) !== JSON.stringify(lastStatusData)) {
+        lastStatusData = d;
+        
+        // Last update timestamp
+        lastUpdate.textContent = new Date().toLocaleString('id-ID');
+        
+        // Route info
+        routeInfo.textContent = d.route;
+        
+        updateTrainStatus(d.trains);
+        updateLights(d.lights);
+      }
     } catch (e) {
       console.error('Error fetching status:', e);
     }
@@ -31,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const speedRes = await fetch('get_status.php?mode=speed&limit=1', { cache: 'no-store' });
       const speedData = await speedRes.json();
       
-      if (speedData.length > 0) {
+      // Perbarui hanya jika ada data baru
+      if (speedData.length > 0 && JSON.stringify(speedData[0]) !== JSON.stringify(lastSpeedData)) {
+        lastSpeedData = speedData[0];
         const entry = speedData[0];
         const rawSpeed = parseInt(entry.kecepatan, 10);
         
@@ -49,9 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Tampilkan mode
         modePanel.textContent = entry.mode.charAt(0).toUpperCase() + entry.mode.slice(1);
-      } else {
-        speedPanel.textContent = 'Tidak ada data';
-        modePanel.textContent = '-';
       }
     } catch (e) {
       console.error('Error fetching speed data:', e);
@@ -60,51 +69,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function updateTrainStatus(trains) {
-    // reset indicators
-    document.querySelectorAll('.train-indicator').forEach(el =>
-      el.classList.remove('running','parking')
-    );
-    // running
-    if (trains.running) {
-      document.getElementById('running-train-status').innerHTML =
-        `<strong>${trains.running}</strong>`;
-      const el = document.getElementById(`train-${trains.running.toLowerCase()}`);
-      if (el) el.classList.add('running');
-    } else {
-      document.getElementById('running-train-status').textContent = 'Tidak terdeteksi';
-    }
-    // parking
-    if (trains.parking && trains.parking.length) {
-      document.getElementById('parking-train-status').innerHTML =
-        `<strong>${trains.parking.join(', ')}</strong>`;
-      trains.parking.forEach(p => {
-        const el = document.getElementById(`train-${p.toLowerCase()}`);
-        if (el) el.classList.add('parking');
-      });
-    } else {
-      document.getElementById('parking-train-status').textContent = 'Tidak terdeteksi';
-    }
+function updateTrainStatus(trains) {
+  // 1. Reset semua indikator running
+  document.querySelectorAll('.train-indicator').forEach(el => {
+    el.classList.remove('running');
+  });
+  
+  // 2. Kereta berjalan
+  if (trains.running) {
+    runningTrainStatus.innerHTML = `<strong>${trains.running}</strong>`;
+    const runningEl = document.getElementById(`train-${trains.running.toLowerCase()}`);
+    if (runningEl) runningEl.classList.add('running');
+  } else {
+    runningTrainStatus.textContent = 'Tidak terdeteksi';
   }
+  
+  // 3. Kereta parkir - reset hanya indikator parkir
+  const parkingIndicators = document.querySelectorAll('.train-indicator.parking');
+  parkingIndicators.forEach(indicator => {
+    indicator.classList.remove('parking');
+  });
+  
+  // 4. Aktifkan indikator parkir untuk stasiun yang aktif
+  if (trains.parking && trains.parking.length) {
+    parkingTrainStatus.innerHTML = `<strong>${trains.parking.join(', ')}</strong>`;
+    
+    trains.parking.forEach(p => {
+      const parkingEl = document.getElementById(`train-${p.toLowerCase()}`);
+      if (parkingEl) {
+        parkingEl.classList.add('parking');
+        
+        // Nonaktifkan running jika ada di stasiun yang sama
+        if (parkingEl.classList.contains('running')) {
+          parkingEl.classList.remove('running');
+        }
+      }
+    });
+  } else {
+    parkingTrainStatus.textContent = 'Tidak terdeteksi';
+  }
+}
 
   function updateLights(lights) {
-    // clear all light boxes
-    document.querySelectorAll('.light-box').forEach(box => {
-      box.innerHTML = '';
-    });
-    // render new lights
+    // Render lampu untuk setiap lokasi
     Object.entries(lights).forEach(([loc, state]) => {
       const box = document.getElementById(`light-${loc.toLowerCase()}`);
       if (!box) return;
-      ['red','yellow','green'].forEach(color => {
+      
+      // Kosongkan box sebelum menambahkan lampu baru
+      box.innerHTML = '';
+      
+      // Tentukan warna lampu yang aktif
+      let activeColor = '';
+      if (state.red) activeColor = 'red';
+      else if (state.yellow) activeColor = 'yellow';
+      else if (state.green) activeColor = 'green';
+      
+      // Buat elemen lampu jika ada warna aktif
+      if (activeColor) {
         const dot = document.createElement('div');
-        dot.className = `light ${color}` + (state[color] ? ' active' : '');
+        dot.className = `light ${activeColor} active`;
         box.appendChild(dot);
-      });
+      }
     });
   }
 
   // initial load & polling
   updateDashboard();
-  setInterval(updateDashboard, 500);
+  setInterval(updateDashboard, 500); // Pembaruan setiap 500ms
 });
